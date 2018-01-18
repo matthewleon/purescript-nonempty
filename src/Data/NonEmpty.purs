@@ -5,12 +5,11 @@ module Data.NonEmpty
   , singleton
   , (:|)
   , foldl1
-  , foldMap1
-  , fold1
   , fromNonEmpty
   , oneOf
   , head
   , tail
+  , module Data.Semigroup.Foldable
   ) where
 
 import Prelude
@@ -24,6 +23,8 @@ import Data.FoldableWithIndex (class FoldableWithIndex, foldMapWithIndex, foldlW
 import Data.FunctorWithIndex (class FunctorWithIndex, mapWithIndex)
 import Data.Maybe (Maybe(..))
 import Data.Ord (class Ord1, compare1)
+import Data.Semigroup.Foldable (fold1, foldMap1)
+import Data.Semigroup.Foldable as SF
 import Data.Traversable (class Traversable, traverse, sequence)
 import Data.TraversableWithIndex (class TraversableWithIndex, traverseWithIndex)
 
@@ -47,14 +48,6 @@ singleton a = a :| empty
 -- | Fold a non-empty structure, collecting results using a binary operation.
 foldl1 :: forall f a. Foldable f => (a -> a -> a) -> NonEmpty f a -> a
 foldl1 f (a :| fa) = foldl f a fa
-
--- | Fold a non-empty structure, collecting results in a `Semigroup`.
-foldMap1 :: forall f a s. Semigroup s => Foldable f => (a -> s) -> NonEmpty f a -> s
-foldMap1 f (a :| fa) = foldl (\s a1 -> s <> f a1) (f a) fa
-
--- | Fold a non-empty structure.
-fold1 :: forall f s. Semigroup s => Foldable f => NonEmpty f s -> s
-fold1 = foldMap1 id
 
 fromNonEmpty :: forall f a r. (a -> f a -> r) -> NonEmpty f a -> r
 fromNonEmpty f (a :| fa) = a `f` fa
@@ -117,3 +110,9 @@ instance traversableWithIndexNonEmpty
   => TraversableWithIndex (Maybe i) (NonEmpty f) where
   traverseWithIndex f (a :| fa) =
     NonEmpty <$> f Nothing a <*> traverseWithIndex (f <<< Just) fa
+
+instance foldable1NonEmpty
+  :: (Functor f, Foldable f)
+  => SF.Foldable1 (NonEmpty f) where
+  fold1 (a :| fa) = foldl append a fa
+  foldMap1 = SF.foldMap1Default
